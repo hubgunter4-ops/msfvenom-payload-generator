@@ -1,6 +1,12 @@
 # Artefactos generados por msfvenom
 payloads/*
+!payloads/.gitkeep
 rc_files/*
+!rc_files/.gitkeep
+
+# Metadatos generados por el despliegue Docker
+lab/manifests/*.json
+!lab/manifests/.gitkeep
 
 # Logs y datos locales de ejecución
 *.log
