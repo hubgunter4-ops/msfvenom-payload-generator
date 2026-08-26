@@ -1,0 +1,31 @@
+# Artefactos generados por msfvenom
+payloads/*
+rc_files/*
+
+# Logs y datos locales de ejecución
+*.log
+*.session
+*.dump
+
+# Credenciales y configuración local
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Cachés y artefactos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# SO/IDE
+.DS_Store
+.vscode/
+.idea/
