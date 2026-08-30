@@ -317,3 +317,15 @@ Este repositorio se publica como material de laboratorio y automatización de pr
 ---
 
 Documentación preparada para un flujo de trabajo de **Red Team/Purple Team autorizado**, con énfasis en trazabilidad, contención y mejora de controles defensivos.
+
+## Guía de ejecución consolidada
+
+Ejecuta el preflight antes del menú principal:
+
+```bash
+python3 MSFVenomPayloadGeneratorv4.0.py --guided
+python3 MSFVenomPayloadGeneratorv4.0.py --dry-run
+python3 lab_deployer.py --help
+```
+
+El preflight no genera payloads, no inicia listeners ni transfiere archivos. Para staging aislado usa `lab_deployer.py deploy --payload payloads/<archivo> --dry-run`; revisa hash, imagen, red y manifiesto antes de cualquier staging autorizado. Ejecuta `python3 -m unittest discover -s tests -v` y conserva la licencia MIT, los avisos y los artefactos fuera de Git.
