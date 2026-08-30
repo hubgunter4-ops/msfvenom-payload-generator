@@ -214,12 +214,12 @@ La implementación actual del generador principal presenta varios puntos que deb
 
 | Observación | Riesgo | Mitigación recomendada |
 |---|---|---|
-| `PayloadHTTPServer` escucha en `0.0.0.0` | Expone el directorio `payloads/` a todas las interfaces alcanzables | Vincular a una interfaz concreta, aplicar firewall de laboratorio, usar una red aislada y detener el servicio al terminar |
-| El servidor usa `os.chdir()` | Cambia el directorio de trabajo global del proceso y puede afectar operaciones posteriores | Sustituirlo por un handler con directorio explícito o encapsular el cambio de contexto |
+| `PayloadHTTPServer` puede configurarse con una interfaz explícita | El bind elegido determina qué interfaces reciben el servicio | El valor predeterminado es `127.0.0.1`; usa una interfaz de laboratorio concreta solo con autorización y firewall |
+| El servidor sirve un directorio local | Un directorio mal elegido puede exponer archivos no previstos | El handler usa un directorio explícito y se debe detener el servidor al terminar |
 | SMB construye credenciales en el argumento de `smbclient` | Las credenciales pueden quedar visibles en procesos, logs o historial | Preferir mecanismos de autenticación seguros, entrada interactiva o un almacén temporal con permisos restrictivos |
 | FTP y Netcat no proporcionan por sí mismos confidencialidad o autenticidad robustas | Riesgo de exposición o manipulación durante la transferencia | Usar SCP/SSH o un canal de laboratorio controlado; verificar hash y registrar la transferencia |
-| Netcat se ejecuta mediante `os.system()` | El parsing por shell aumenta el riesgo de inyección y de errores de quoting | Migrar a `subprocess.run()` con lista de argumentos y validación estricta de host/puerto |
-| El monitor descarta excepciones con `except Exception: pass` | Puede ocultar fallos y producir una falsa sensación de monitorización activa | Registrar excepciones de forma segura y exponer estado de salud del monitor |
+| Netcat usa `subprocess.run()` con lista de argumentos | Un host o puerto sin validar podría provocar errores o destinos inesperados | Se validan host y puerto; aun así, limita la ejecución a la red de laboratorio |
+| El monitor registra errores y continúa su ciclo | Un fallo repetido puede indicar que el log no es accesible o cambió de formato | Revisar stderr y detener el monitor al terminar la ventana de laboratorio |
 | No existe una allowlist de objetivos | Un error de entrada puede dirigir una transferencia a un sistema no autorizado | Añadir validación de CIDR/hostname, confirmación previa y bloqueo por defecto |
 | No se verifica el hash del artefacto | Dificulta probar integridad y trazabilidad del archivo transferido | Generar SHA-256, conservarlo en la evidencia y verificarlo en el receptor |
 
@@ -240,7 +240,19 @@ La actividad debe planificarse como una validación controlada de controles, no 
 
 Los resultados deben registrar al menos: identificador del caso, objetivo autorizado, timestamp, operador, hash SHA-256, payload lógico y formato, canal de entrega, controles que alertaron, controles que bloquearon, tiempo de detección, tiempo de contención y acciones de cleanup. **No se deben almacenar secretos ni datos personales innecesarios**.
 
-## Validación y pruebas seguras
+## Ejecución guiada
+
+Antes del menú interactivo, ejecuta un preflight sin efectos externos:
+
+```bash
+python3 MSFVenomPayloadGeneratorv4.0.py --guided
+python3 MSFVenomPayloadGeneratorv4.0.py --dry-run
+```
+
+Estas opciones muestran el flujo recomendado y comprueban dependencias sin crear payloads, lanzar listeners, transferir archivos ni modificar la red.
+
+## Validación y pruebas
+ seguras
 
 La validación básica del código puede realizarse sin generar artefactos ni iniciar listeners mediante una comprobación de sintaxis:
 

