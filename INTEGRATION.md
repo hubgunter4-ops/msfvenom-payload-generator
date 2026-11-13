@@ -9,7 +9,11 @@ Estos dos módulos nuevos reparan, sin tocar el generador de payloads:
 - `msfconsole_manager.py`: `MsfConsoleManager` con `start/stop/is_running`,
   `terminate` -> `wait` -> `kill`, y context manager. Sin `shell=True`.
 
-## Cómo cablearlo en MSFVenomPayloadGeneratorv4.0.py (10 líneas)
+## Integrado el 2026-11-13
+
+Ya está cableado en `MSFVenomPayloadGeneratorv4.0.py`: `SessionMonitor._procesar` usa `parse_session_event`, `_monitorear` resetea la posición si el log rota, y `MSFVenomGenerator.lanzar_listener` arranca msfconsole con `MsfConsoleManager` (con `detener_listener()` para pararlo). Ver `tests/test_integration.py`.
+
+## Cómo se cableó (referencia)
 
 En `SessionMonitor._procesar`, en vez del regex solo IPv4:
 

@@ -37,6 +37,8 @@ import socket
 from datetime import datetime
 
 from pathlib import Path
+from msfconsole_manager import MsfConsoleManager
+from session_parser import LogPositionTracker, SessionDeduplicator, parse_session_event
 
 
 
@@ -153,6 +155,8 @@ class SessionMonitor:
         self.posicion = 0
 
         self.sesiones_vistas = set()
+        self._dedup = SessionDeduplicator()
+        self._log_tracker = LogPositionTracker()
 
         self.activo = False
 
@@ -198,11 +202,17 @@ class SessionMonitor:
 
                 with open(self.log_file, "r") as f:
 
+                    # Rotación/truncado del log: si el archivo se achicó, volver al inicio.
+                    try:
+                        self.posicion = self._log_tracker.update(os.path.getsize(self.log_file))
+                    except OSError:
+                        pass
                     f.seek(self.posicion)
 
                     contenido = f.read()
 
                     self.posicion = f.tell()
+                    self._log_tracker.advance(self.posicion)
 
 
 
@@ -219,40 +229,21 @@ class SessionMonitor:
 
 
     def _procesar(self, contenido):
-
-        import re
-
-        patron = re.compile(
-
-            r"((?:Meterpreter|Command shell) session\s+(\d+)\s+opened.*?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}))",
-
-            re.IGNORECASE
-
-        )
-
-        for match in patron.finditer(contenido):
-
-            sid = match.group(2)
-
-            ip = match.group(3)
-
-            if sid not in self.sesiones_vistas:
-
-                self.sesiones_vistas.add(sid)
-
-                info = {
-
-                    "id": sid,
-
-                    "tipo": "meterpreter" if "Meterpreter" in match.group(1) else "shell",
-
-                    "ip": ip,
-
-                    "timestamp": datetime.now().isoformat(),
-
-                }
-
-                self._notificar(info)
+        """Procesa texto nuevo del log con parse_session_event (IPv4/IPv6)."""
+        for linea in contenido.splitlines():
+            ev = parse_session_event(linea)
+            if ev is None:
+                continue
+            if not self._dedup.is_new(ev["id"]):
+                continue
+            self.sesiones_vistas.add(ev["id"])
+            info = {
+                "id": ev["id"],
+                "tipo": ev["type"],
+                "ip": ev["ip"],
+                "timestamp": datetime.now().isoformat(),
+            }
+            self._notificar(info)
 
 
 
@@ -754,7 +745,8 @@ class MSFVenomGenerator:
 
         if background:
 
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            self.listener_manager = MsfConsoleManager()
+            p = self.listener_manager.start(rc_path)
 
             print(f"[+] Listener en background (PID: {p.pid})")
 
@@ -773,6 +765,18 @@ class MSFVenomGenerator:
             self.ejecutar(cmd)
 
             return None
+
+    def detener_listener(self):
+        """Detiene el monitor de sesiones y el proceso msfconsole, si existen."""
+        monitor = getattr(self, "monitor", None)
+        if monitor is not None:
+            try:
+                monitor.detener()
+            except Exception:
+                pass
+        manager = getattr(self, "listener_manager", None)
+        if manager is not None:
+            manager.stop()
 
 
 
