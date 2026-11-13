@@ -2,6 +2,12 @@
 
 # MSFVenom Payload Generator v4.0
 
+[![Python](https://img.shields.io/badge/Python-3-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Top Language](https://img.shields.io/github/languages/top/hubgunter4-ops/msfvenom-payload-generator)](https://github.com/hubgunter4-ops/msfvenom-payload-generator)
+[![Last commit](https://img.shields.io/github/last-commit/hubgunter4-ops/msfvenom-payload-generator/main)](https://github.com/hubgunter4-ops/msfvenom-payload-generator/commits/main)
+[![Repo size](https://img.shields.io/github/repo-size/hubgunter4-ops/msfvenom-payload-generator)](https://github.com/hubgunter4-ops/msfvenom-payload-generator)
+[![Uso autorizado](https://img.shields.io/badge/Uso%20autorizado-Laboratorio%20%C3%BAnicamente-yellow)](https://github.com/hubgunter4-ops/msfvenom-payload-generator#alcance)
+
 Herramienta de línea de comandos para **laboratorios de Red Team, ejercicios Purple Team y pruebas de penetración autorizadas**. El proyecto proporciona una interfaz interactiva alrededor de `msfvenom` para generar artefactos de prueba, crear archivos de recursos para `msfconsole`, levantar opcionalmente un handler y observar nuevas sesiones a través del log local de Metasploit.
 
 ![Ilustración del laboratorio Docker aislado](assets/repository-lab.png)
